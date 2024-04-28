@@ -1,18 +1,18 @@
 package com.dicoding.asclepius.ui.main
 
 import android.content.Intent
-import android.opengl.Visibility
 import android.os.Bundle
-import android.view.View
+import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.dicoding.asclepius.R
 import com.dicoding.asclepius.data.Result
 import com.dicoding.asclepius.databinding.ActivityMainBinding
 import com.dicoding.asclepius.ui.adapter.CancerClassificationAdapter
 import com.dicoding.asclepius.ui.classification.ClassificationActivity
-import com.dicoding.asclepius.ui.result.ResultActivity
 
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels {
@@ -23,26 +23,56 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
+    private val ccAdapter by lazy {
+        CancerClassificationAdapter()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+        setTitle("Home")
 
-        val ccAdapter = CancerClassificationAdapter()
-        setRecyclerView(ccAdapter)
+        setRecyclerView()
 
-        getCancerClassifications(ccAdapter)
+        fetchNews()
+        getCancerClassifications()
 
         binding.btnClassify.setOnClickListener {
             startClassification()
         }
     }
 
-    private fun getCancerClassifications(ccAdapter: CancerClassificationAdapter) {
+    override fun onResume() {
+        super.onResume()
+        fetchNews()
+        getCancerClassifications()
+    }
+
+    private fun fetchNews() {
+        viewModel.fetchTopHeadlines().observe(this) {
+            when (it) {
+                is Result.Error -> {
+                    Log.d("MainActivity", "Error ${it.error}")
+                }
+                Result.Loading -> {
+                    Log.d("MainActivity", "Loading...")
+                }
+                is Result.Success -> {
+                    Glide.with(this@MainActivity)
+                        .load(it.data.articles.first().urlToImage)
+                        .into(binding.imgNewsHeadline)
+                    binding.tvNewsTitle.text = it.data.articles.first().title
+                }
+            }
+        }
+    }
+
+    private fun getCancerClassifications() {
         viewModel.getAllCancerClassifications().observe(this) {
             if (it.isNullOrEmpty()) {
-                binding.tvNoSaved.visibility = View.VISIBLE
+                binding.tvSavedTitle.text = getString(R.string.empty_saved_result)
             } else {
-                binding.tvNoSaved.visibility = View.GONE
+                binding.tvSavedTitle.text = getString(R.string.saved_result)
                 ccAdapter.submitList(it)
             }
         }
@@ -52,7 +82,7 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent(this, ClassificationActivity::class.java))
     }
 
-    private fun setRecyclerView(ccAdapter: CancerClassificationAdapter) {
+    private fun setRecyclerView() {
         binding.rvCancerClassifications.apply {
             addItemDecoration(
                 DividerItemDecoration(

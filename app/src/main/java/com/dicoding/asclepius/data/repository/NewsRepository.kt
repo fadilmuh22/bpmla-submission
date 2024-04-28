@@ -3,19 +3,19 @@ package com.dicoding.asclepius.data.repository
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
+import com.dicoding.asclepius.data.Result
 import com.dicoding.asclepius.data.remote.response.ApiResponse
 import com.dicoding.asclepius.data.remote.retrofit.ApiService
-import com.dicoding.asclepius.data.Result
 
 class NewsRepository private constructor(
     private val apiService: ApiService,
 ) {
-
     fun fetchTopHeadlines(): LiveData<Result<ApiResponse>> =
         liveData {
             emit(Result.Loading)
             try {
                 val response = apiService.getTopHeadlines()
+                Log.d(TAG, response.toString())
                 emit(Result.Success(response))
             } catch (e: Exception) {
                 Log.d(TAG, "fetchTopHeadlines: ${e.message}")
